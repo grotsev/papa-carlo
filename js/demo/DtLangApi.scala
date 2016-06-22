@@ -21,7 +21,7 @@ import js.annotation.{ JSName, JSExport }
 
 import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
-import name.lakhin.eliah.projects.papacarlo.examples.DtLang
+import kz.greetgo.dtlang.DtLang
 
 @JSExport
 object DtLangApi {

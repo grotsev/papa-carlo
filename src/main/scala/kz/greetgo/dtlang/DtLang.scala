@@ -1,12 +1,8 @@
-package name.lakhin.eliah.projects
-package papacarlo.examples
+package kz.greetgo.dtlang
 
-import name.lakhin.eliah.projects.papacarlo.lexis.Matcher._
-import name.lakhin.eliah.projects.papacarlo.{Lexer, Syntax}
-import name.lakhin.eliah.projects.papacarlo.lexis.{Contextualizer, Token, _}
-import name.lakhin.eliah.projects.papacarlo.syntax.Expressions._
-import name.lakhin.eliah.projects.papacarlo.syntax.Rule._
+import name.lakhin.eliah.projects.papacarlo.lexis.{Contextualizer, Matcher, Token, Tokenizer}
 import name.lakhin.eliah.projects.papacarlo.syntax.{Expressions, Rule}
+import name.lakhin.eliah.projects.papacarlo.{Lexer, Syntax}
 
 /**
   * Created by den on 09.06.16.
@@ -160,9 +156,8 @@ object DtLang {
       )
     }
 
-    val fun = rule("fun") {
+    val call = rule("call") {
       sequence(
-        token("name"),
         token("("),
         zeroOrMore(
           branch("expr", expr),
@@ -177,8 +172,10 @@ object DtLang {
       choice(
         token("string"),
         token("number"),
-        branch("fun", fun),
-        branch("path", path)
+        sequence(
+          branch("path", path),
+          branch("call", optional(call))
+        )
       )
     }
 
