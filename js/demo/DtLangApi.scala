@@ -21,15 +21,15 @@ import js.annotation.{ JSName, JSExport }
 
 import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
-import name.lakhin.eliah.projects.papacarlo.examples.Json
+import name.lakhin.eliah.projects.papacarlo.examples.DtLang
 
 @JSExport
-object Demo {
-  private val lexer = Json.lexer
-  private val syntax = Json.syntax(lexer)
+object DtLangApi {
+  private val lexer = DtLang.lexer
+  private val syntax = DtLang.syntax(lexer)
   private var addedNodes = List.empty[Int]
   private var removedNodes = List.empty[Int]
-  
+
   syntax.onNodeCreate.bind { node => addedNodes ::= node.getId }
   syntax.onNodeRemove.bind { node => removedNodes ::= node.getId }
 

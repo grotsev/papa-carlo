@@ -28,7 +28,7 @@ onmessage = function(event) {
     case 'init':
       if (!parser) {
         importScripts('./target/scala-2.11/papa-carlo-opt.js');
-        parser = Demo();
+        parser = DtLangApi();
       }
 
       postMessage({kind: 'ready'});

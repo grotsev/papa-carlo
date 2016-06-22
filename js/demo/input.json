@@ -1,40 +1,30 @@
-{
-  "id": 1,
-  "guid": "866b81f6-dda1-4c47-945a-005ae6f55996",
-  "isActive": true,
-  "balance": "$1,832.00",
-  "picture": "http://example.com/32x32",
-  "age": 34,
-  "name": "Joyce Sargent",
-  "gender": "female",
-  "company": "Hometown",
-  "email": "joycesargent@example.com",
-  "phone": "+1 (937) 515-2457",
-  "registered": "2005-11-02T22:22:53 -07:00",
-  "latitude": 67.658935,
-  "longitude": 164.839993,
-  "tags": [
-    "nisi",
-    "est",
-    "eu",
-    "amet",
-    "aute",
-    "enim",
-    "ipsum"
-  ],
-  "friends": [
-    {
-      "id": 0,
-      "name": "Minerva Hahn"
-    },
-    {
-      "id": 1,
-      "name": "Brandy Jacobson"
-    },
-    {
-      "id": 2,
-      "name": "Lillie Kent"
-    }
-  ]
-}
-
+seq (
+  let (x, 5),
+  let (client.account[type:in.account[1].type][1].sum, in.sum+100_0001 + 1+ 2*3%4),
+  let (client.surname, "Mr."~in.surname~1+2*3%4),
+  switch (
+    case (
+      date("2016-03-04")-today()>month(5),
+      seq (
+        return (),
+        break ()
+      )
+    ),
+    case (22+size(x) = 0, continue()),
+    case (true,
+      for (i, 1, 50,
+        seq (
+          let (x, x+1),
+          switch (
+            case (x>10, continue (i)),
+            case (x<0, call (doIt))
+          )
+        )
+      )
+    )
+  ),
+  let (
+    y,
+    min(max((1+2*3)/4, 0), 10) >= round(5.555_555__, 1) & ! (true () | false ())
+  )
+)
