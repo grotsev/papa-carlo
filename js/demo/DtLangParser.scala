@@ -24,7 +24,7 @@ import name.lakhin.eliah.projects.papacarlo.syntax.Node
 import kz.greetgo.dtlang.DtLang
 
 @JSExport
-object DtLangApi {
+object DtLangParser {
   private val lexer = DtLang.lexer
   private val syntax = DtLang.syntax(lexer)
   private var addedNodes = List.empty[Int]
