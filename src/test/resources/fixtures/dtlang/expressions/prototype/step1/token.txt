@@ -1,0 +1,4 @@
+name~0~ (~2:0~
+  name (~2:2:0~name, number+number*number)
+~2:0~)
+~0~

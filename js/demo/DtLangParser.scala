@@ -17,13 +17,14 @@
 package name.lakhin.eliah.projects.papacarlo.js.demo
 
 import scala.scalajs.js
-import js.annotation.{ JSName, JSExport }
+import js.JSConverters._
+import js.annotation.{JSName, JSExport}
 
 import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
 import kz.greetgo.dtlang.DtLang
 
-@JSExport
+@JSExport("DtLangParser")
 object DtLangParser {
   private val lexer = DtLang.lexer
   private val syntax = DtLang.syntax(lexer)
@@ -32,6 +33,39 @@ object DtLangParser {
 
   syntax.onNodeCreate.bind { node => addedNodes ::= node.getId }
   syntax.onNodeRemove.bind { node => removedNodes ::= node.getId }
+
+  @JSExport
+  def allNodeList(text: String) = {
+    lexer.input(text)
+    val array = new js.Array[js.Any]
+    if (syntax.getRootNode.isDefined)
+      extractStatements(array, syntax.getRootNode.get);
+    array
+  }
+
+  val statements = List("seq", "switch", "case", "call", "let", "for", "break", "continue")
+
+  def extractStatements(array: js.Array[js.Any], node: Node, parent: Option[Int] = None): Unit = {
+    for (
+      result <- node.getBranches.getOrElse("result", List.empty);
+      call <- result.getBranches.getOrElse("call", List.empty);
+      path <- result.getBranches.getOrElse("path", List.empty);
+      segment <- path.getBranches.getOrElse("segment", List.empty);
+      name <- segment.getValues.getOrElse("name", List.empty);
+      if (statements contains name)
+    ) {
+      val id = node.getId
+      val element = js.Dynamic.literal(
+        "id" -> id,
+        "parent" -> parent.orUndefined,
+        "text" -> name,
+        "type" -> name
+      )
+      array.push(element)
+      for (subExpr <- call.getBranches.getOrElse("expr", List.empty))
+        extractStatements(array, subExpr, Some(id))
+    }
+  }
 
   @JSExport
   def inputAll(text: String) {
@@ -64,7 +98,7 @@ object DtLangParser {
 
   @JSExport
   def getNodeFragment(id: Int) = {
-    syntax.nodes.get(id) match {
+    syntax.getNode(id) match {
       case Some(node) =>
         js.Dynamic.literal(
           "exists" -> true,
@@ -84,16 +118,18 @@ object DtLangParser {
   def getAST(graph: Boolean = false) = {
     val result = js.Dictionary.empty[js.Any]
 
-    result("total") = syntax.nodes.size
+    //result("total") = syntax.nodes.size
     result("added") = toJsArray(addedNodes.reverse.map(x => x: js.Any))
     result("removed") = toJsArray(removedNodes.reverse.map(x => x: js.Any))
 
     if (graph) {
       val ast = js.Dictionary.empty[js.Any]
 
-      for (node <- syntax.nodes.elements) {
-        ast(node.getId.toString) = exportNode(node)
-      }
+      /* TODO
+            for (node <- syntax.nodes.elements) {
+              ast(node.getId.toString) = exportNode(node)
+            }
+      */
 
       result("all") = ast
     }
@@ -132,7 +168,7 @@ object DtLangParser {
       "values" -> mapToObject(node.getValues
         .map {
           case (key, values) =>
-            key -> toJsArray(values.map(s => s: js.String))
+            key -> toJsArray(values.map(s => s: js.Any))
         }
       )
     )
@@ -143,5 +179,6 @@ object DtLangParser {
 
     js.Dynamic.literal("line" -> (pair._1 - 1), "ch" -> (pair._2 - 1))
   }
+
 }
 
