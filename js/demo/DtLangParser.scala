@@ -43,7 +43,13 @@ object DtLangParser {
     array
   }
 
-  val statements = List("seq", "switch", "case", "call", "let", "for", "break", "continue")
+  val statements = List(
+    "Assign",
+    "Group",
+    "Condition", "Case",
+    "ForEach", "Break", "Continue",
+    "Procedure", "Exit", "Stop", "Message", "Error")
+
 
   def extractStatements(array: js.Array[js.Any], node: Node, parent: Option[Int] = None): Unit = {
     for (
@@ -57,7 +63,7 @@ object DtLangParser {
       val id = node.getId
       val element = js.Dynamic.literal(
         "id" -> id,
-        "parent" -> parent.orUndefined,
+        "parent" -> parent.map(_.toString).getOrElse[String]("#"),
         "text" -> name,
         "type" -> name
       )
