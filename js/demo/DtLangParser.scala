@@ -18,24 +18,112 @@ package name.lakhin.eliah.projects.papacarlo.js.demo
 
 import scala.scalajs.js
 import js.JSConverters._
-import js.annotation.{JSName, JSExport}
-
+import js.annotation.{JSExport, JSName}
 import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
 import kz.greetgo.dtlang.DtLang
 
+import scala.scalajs.js.UndefOr
+
+/**
+  * Created by den on 20.06.16.
+  */
 @JSExport("DtLangParser")
 object DtLangParser {
   private val lexer = DtLang.lexer
   private val syntax = DtLang.syntax(lexer)
-  private var addedNodes = List.empty[Int]
-  private var removedNodes = List.empty[Int]
+  private var lastAddedNode = Option.empty[Int]
+  private var lastRemovedNode = Option.empty[Int]
 
+  private var addedNodes = List.empty[Int] // TODO remove
+  private var removedNodes = List.empty[Int]
   syntax.onNodeCreate.bind { node => addedNodes ::= node.getId }
   syntax.onNodeRemove.bind { node => removedNodes ::= node.getId }
 
+
+  syntax.onNodeMerge.bind { node => lastAddedNode = Some(node.getId) } // Root is last
+  syntax.onNodeRemove.bind { node => lastRemovedNode = Some(node.getId) }
+  // Is root last or first?
+
+  val statements = List(
+    "empty", "assign", "group",
+    "condition", "case",
+    "foreach", "break", "continue",
+    "procedure", "exit", "stop", "message", "error"
+  )
+  /*
+    @JSExport
+    def register(onStmtCreate: js.Function1[js.Dynamic, Unit], onStmtRemove: js.Function1[Int, Unit]) = {
+      syntax.onNodeCreate.bind { node =>
+        for (
+          result <- node.getBranches.getOrElse("result", List.empty);
+          call <- result.getBranches.getOrElse("call", List.empty);
+          path <- result.getBranches.getOrElse("path", List.empty);
+          segment <- path.getBranches.getOrElse("segment", List.empty);
+          name <- segment.getValues.getOrElse("name", List.empty);
+          if (statements contains name)
+        ) {
+          val dNode = js.Dynamic.literal(
+            "id" -> node.getId,
+            "parent" -> node.getParent.map(_.getId).orUndefined,
+            "text" -> name,
+            "type" -> name
+          )
+          onStmtCreate.apply(dNode)
+        }
+      }
+
+      syntax.onNodeRemove.bind { node => onStmtRemove.apply(node.getId) }
+    }
+
+    private def branch(node: Node, name: String): Unit = {
+      node.getBranches.getOrElse(name, List.empty)
+    }
+  */
+
+  @JSExport
+  def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
+    oldId.map(id => {
+      val oldNode: Node = syntax.getNode(id).get // WARN should find, otherwise bug is somewhere
+      lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
+    }
+    ) orElse lexer.input(text)
+    val n = lastAddedNode;
+    println(n)
+    lastAddedNode = None
+    n.flatMap(syntax.getNode).flatMap(extractStats(_)).orUndefined;
+  }
+
+  def extractStats(node: Node, parent: Option[Int] = None): Option[js.Dynamic] = {
+    for (
+      result <- node.getBranches.getOrElse("result", List.empty);
+      call <- result.getBranches.getOrElse("call", List.empty);
+      path <- result.getBranches.getOrElse("path", List.empty);
+      segment <- path.getBranches.getOrElse("segment", List.empty);
+      name <- segment.getValues.getOrElse("name", List.empty);
+      if (statements contains name)
+    ) {
+      val id = node.getId
+      val element = js.Dynamic.literal(
+        "id" -> id,
+        "parent" -> parent.map(_.toString).getOrElse[String]("#"),
+        "text" -> name,
+        "type" -> name
+      )
+      val children = new js.Array[js.Any]
+      for (subExpr <- call.getBranches.getOrElse("expr", List.empty)) {
+        val child = extractStats(subExpr, Some(id))
+        child.foreach(children.push(_))
+      }
+      if (children.length > 0) element.updateDynamic("children")(children)
+      return Some(element)
+    }
+    None
+  }
+
   @JSExport
   def allNodeList(text: String) = {
+    // TODO replace to extractStats
     lexer.input(text)
     val array = new js.Array[js.Any]
     if (syntax.getRootNode.isDefined)
@@ -43,15 +131,8 @@ object DtLangParser {
     array
   }
 
-  val statements = List(
-    "Assign",
-    "Group",
-    "Condition", "Case",
-    "ForEach", "Break", "Continue",
-    "Procedure", "Exit", "Stop", "Message", "Error")
-
-
   def extractStatements(array: js.Array[js.Any], node: Node, parent: Option[Int] = None): Unit = {
+    // TODO remove
     for (
       result <- node.getBranches.getOrElse("result", List.empty);
       call <- result.getBranches.getOrElse("call", List.empty);
@@ -72,6 +153,12 @@ object DtLangParser {
         extractStatements(array, subExpr, Some(id))
     }
   }
+
+  private def tokenPos(token: TokenReference, after: Boolean = false) = {
+    token.collection.cursor(token.index + (if (after) 1 else 0))
+  }
+
+  // for demo
 
   @JSExport
   def inputAll(text: String) {
@@ -104,7 +191,7 @@ object DtLangParser {
 
   @JSExport
   def getNodeFragment(id: Int) = {
-    syntax.getNode(id) match {
+    syntax.nodes.get(id) match {
       case Some(node) =>
         js.Dynamic.literal(
           "exists" -> true,
@@ -124,18 +211,16 @@ object DtLangParser {
   def getAST(graph: Boolean = false) = {
     val result = js.Dictionary.empty[js.Any]
 
-    //result("total") = syntax.nodes.size
+    result("total") = syntax.nodes.size
     result("added") = toJsArray(addedNodes.reverse.map(x => x: js.Any))
     result("removed") = toJsArray(removedNodes.reverse.map(x => x: js.Any))
 
     if (graph) {
       val ast = js.Dictionary.empty[js.Any]
 
-      /* TODO
-            for (node <- syntax.nodes.elements) {
-              ast(node.getId.toString) = exportNode(node)
-            }
-      */
+      for (node <- syntax.nodes.elements) {
+        ast(node.getId.toString) = exportNode(node)
+      }
 
       result("all") = ast
     }
