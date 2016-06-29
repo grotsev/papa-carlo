@@ -1,0 +1,64 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'maven'
+apply plugin: 'idea'
+apply plugin: 'scala'
+
+group = 'kz.greetgo'
+
+sourceCompatibility = 1.8
+version = '0.0.1'
+
+def nowDate = new Date()
+def nowFormattedDate = nowDate.format("yyyy-MM-dd/HH:mm:ss")
+
+jar {
+  manifest {
+    attributes 'Implementation-Title': project.name,
+        'Implementation-Version': version, 'Implementation-Vendor': 'greetgo!',
+        'Built-By': System.getProperty("user.name"), 'Built-At': nowFormattedDate
+  }
+}
+
+eclipse.project.natures 'org.springsource.ide.eclipse.gradle.core.nature'
+
+eclipse {
+  jdt {
+    //
+    // if you want to alter the java versions (by default they are configured with
+    // gradle java plugin settings):
+    //
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+  }
+}
+
+project.eclipse.classpath.file.whenMerged { cp ->
+  if (project.hasProperty("sourceCompatibility")) {
+    cp.entries.findAll { it.path.contains('JRE_CONTAINER') }.each {
+
+      it.path += "/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/" +
+          "JavaSE-$project.sourceCompatibility"
+    }
+  }
+}
+
+repositories {
+  maven {
+    name 'Our repository'
+    url System.getenv('GG_REPO')
+  }
+}
+
+configurations { repoUpload }
+
+dependencies {
+  testCompile 'org.testng:testng:6.5.1'
+  testCompile 'org.easytesting:fest-assert-core:2.0M10'
+
+  compile 'com.google.code.findbugs:annotations:2.0.1'
+  compile 'org.scala-lang:scala-library:2.11.1'
+
+}
+
+test { useTestNG() }
