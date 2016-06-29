@@ -6,7 +6,7 @@ apply plugin: 'scala'
 
 group = 'kz.greetgo'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.7
 version = '0.0.1'
 
 def nowDate = new Date()
@@ -28,8 +28,8 @@ eclipse {
     // if you want to alter the java versions (by default they are configured with
     // gradle java plugin settings):
     //
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
   }
 }
 
@@ -58,6 +58,8 @@ dependencies {
 
   compile 'com.google.code.findbugs:annotations:2.0.1'
   compile 'org.scala-lang:scala-library:2.11.1'
+  compile group: 'org.scalatest', name: 'scalatest_2.11', version: '3.0.0-M16-SNAP6'
+  compile group: 'net.liftweb', name: 'lift-webkit_2.10', version: '3.0-M1'
 
 }
 
