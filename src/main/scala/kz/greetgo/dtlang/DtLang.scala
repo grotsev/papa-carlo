@@ -89,7 +89,7 @@ object DtLang {
     import Rule._
     import syntax._
 
-    val expr: Rule = rule("expr").cachable.main {
+    val expr: Rule = rule("expr").main.cachable {
       val rule = expression(branch("operand", atom))
 
       var p = 1
@@ -129,7 +129,7 @@ object DtLang {
       rule
     }
 
-    val index = rule("index") {
+    val index = rule("index").cachable {
       sequence(
         token("["),
         optional(sequence(
@@ -148,7 +148,7 @@ object DtLang {
       )
     }
 
-    val path = rule("path") {
+    val path = rule("path").cachable {
       oneOrMore(
         branch("segment", segment),
         separator =
@@ -156,7 +156,7 @@ object DtLang {
       )
     }
 
-    val call = rule("call") {
+    val call = rule("call").cachable {
       sequence(
         token("("),
         zeroOrMore(
