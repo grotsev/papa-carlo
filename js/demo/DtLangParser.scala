@@ -22,6 +22,7 @@ import js.annotation.{JSExport, JSName}
 import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
 import kz.greetgo.dtlang.DtLang
+
 //import name.lakhin.eliah.projects.papacarlo.examples.Json
 
 import scala.scalajs.js.UndefOr
@@ -36,14 +37,21 @@ object DtLangParser {
   private var lastAddedNode = Option.empty[Int]
   private var lastRemovedNode = Option.empty[Int]
 
-  private var addedNodes = List.empty[Int] // TODO remove
+  private var addedNodes = List.empty[Int]
+  // TODO remove
   private var removedNodes = List.empty[Int]
   syntax.onNodeCreate.bind { node => addedNodes ::= node.getId }
   syntax.onNodeRemove.bind { node => removedNodes ::= node.getId }
 
 
-  syntax.onNodeMerge.bind { node => lastAddedNode = Some(node.getId) } // Root is last
-  syntax.onNodeRemove.bind { node => lastRemovedNode = Some(node.getId) }
+  private var firstAddedExpr = Option.empty[Int]
+
+  syntax.onNodeCreate.bind { node => // Root is last
+    if (firstAddedExpr.isEmpty && node.getKind == "expr")
+      firstAddedExpr = Some(node.getId)
+  }
+
+  //syntax.onNodeRemove.bind { node => lastRemovedNode = Some(node.getId) }
   // Is root last or first?
 
   val statements = List(
@@ -52,47 +60,18 @@ object DtLangParser {
     "foreach", "break", "continue",
     "procedure", "exit", "stop", "message", "error"
   )
-  /*
-    @JSExport
-    def register(onStmtCreate: js.Function1[js.Dynamic, Unit], onStmtRemove: js.Function1[Int, Unit]) = {
-      syntax.onNodeCreate.bind { node =>
-        for (
-          result <- node.getBranches.getOrElse("result", List.empty);
-          call <- result.getBranches.getOrElse("call", List.empty);
-          path <- result.getBranches.getOrElse("path", List.empty);
-          segment <- path.getBranches.getOrElse("segment", List.empty);
-          name <- segment.getValues.getOrElse("name", List.empty);
-          if (statements contains name)
-        ) {
-          val dNode = js.Dynamic.literal(
-            "id" -> node.getId,
-            "parent" -> node.getParent.map(_.getId).orUndefined,
-            "text" -> name,
-            "type" -> name
-          )
-          onStmtCreate.apply(dNode)
-        }
-      }
-
-      syntax.onNodeRemove.bind { node => onStmtRemove.apply(node.getId) }
-    }
-
-    private def branch(node: Node, name: String): Unit = {
-      node.getBranches.getOrElse(name, List.empty)
-    }
-  */
 
   @JSExport
   def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
-    oldId.map(id => {
-      val oldNode: Node = syntax.getNode(id).get // WARN should find, otherwise bug is somewhere
+    firstAddedExpr = None
+    if (oldId.isDefined) {
+      val oldNode: Node = syntax.getNode(oldId.get).get // WARN should find, otherwise bug is somewhere
       lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
-    }
-    ) orElse lexer.input(text)
-    val n = lastAddedNode;
-    println(n)
-    lastAddedNode = None
-    n.flatMap(syntax.getNode).flatMap(extractStats(_)).orUndefined;
+    } else lexer.input(text)
+    val n = firstAddedExpr;
+    firstAddedExpr = None
+    val node = syntax.getNode(n.get).get // should be Some
+    extractStats(node).orUndefined;
   }
 
   def extractStats(node: Node, parent: Option[Int] = None): Option[js.Dynamic] = {
@@ -120,6 +99,11 @@ object DtLangParser {
       return Some(element)
     }
     None
+  }
+
+  private def tokenPos(token: TokenReference, after: Boolean = false) = {
+    val c = token.collection.cursor(token.index + (if (after) 1 else 0))
+    (c._1 - 1, c._2 - 1)
   }
 
   @JSExport
@@ -153,10 +137,6 @@ object DtLangParser {
       for (subExpr <- call.getBranches.getOrElse("expr", List.empty))
         extractStatements(array, subExpr, Some(id))
     }
-  }
-
-  private def tokenPos(token: TokenReference, after: Boolean = false) = {
-    token.collection.cursor(token.index + (if (after) 1 else 0))
   }
 
   // for demo
