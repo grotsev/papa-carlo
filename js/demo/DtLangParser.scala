@@ -87,14 +87,36 @@ object DtLangParser {
       if (statements contains name)
     ) {
       val id = node.getId
+      val e = (i: Int) => call.getBranches("expr")(i).sourceCode
       val element = js.Dynamic.literal(
         "id" -> id,
         "parent" -> parent.map(_.toString).getOrElse[String]("#"),
         "text" -> (name match {
+          case "assign" => {
+            e(0) + " := " + e(1)
+          }
+          case "case" => {
+            e(0)
+          }
           case "foreach" => {
-            val exprs = call.getBranches("expr")
-            val e = (i: Int) => exprs(i).sourceCode
             "foreach " + e(0) + " := " + e(1) + " .. " + e(2)
+          }
+          case "break" => {
+            val exprs = call.getBranches.get("expr")
+            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+          }
+          case "continue" => {
+            val exprs = call.getBranches.get("expr")
+            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+          }
+          case "procedure" => {
+            "procedure " + e(0)
+          }
+          case "message" => {
+            "message " + e(0)
+          }
+          case "error" => {
+            "error " + e(0)
           }
           case _ => name
         }),
