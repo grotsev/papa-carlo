@@ -64,13 +64,16 @@ object DtLangParser {
   @JSExport
   def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
     firstAddedExpr = None
-    if (oldId.isDefined) {
+    val node:Node = if (oldId.isDefined) {
       val oldNode: Node = syntax.getNode(oldId.get).get // WARN should find, otherwise bug is somewhere
       lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
-    } else lexer.input(text)
-    val n = firstAddedExpr;
+      val n = firstAddedExpr;
+      syntax.getNode(n.get).get // should be Some
+    } else {
+      lexer.input(text)
+      syntax.getRootNode.get // should be Some
+    }
     firstAddedExpr = None
-    val node = syntax.getNode(n.get).get // should be Some
     extractStats(node).orUndefined;
   }
 
@@ -87,7 +90,14 @@ object DtLangParser {
       val element = js.Dynamic.literal(
         "id" -> id,
         "parent" -> parent.map(_.toString).getOrElse[String]("#"),
-        "text" -> name,
+        "text" -> (name match {
+          case "foreach" => {
+            val exprs = call.getBranches("expr")
+            val e = (i: Int) => exprs(i).sourceCode
+            "foreach " + e(0) + " := " + e(1) + " .. " + e(2)
+          }
+          case _ => name
+        }),
         "type" -> name
       )
       val children = new js.Array[js.Any]
@@ -104,39 +114,6 @@ object DtLangParser {
   private def tokenPos(token: TokenReference, after: Boolean = false) = {
     val c = token.collection.cursor(token.index + (if (after) 1 else 0))
     (c._1 - 1, c._2 - 1)
-  }
-
-  @JSExport
-  def allNodeList(text: String) = {
-    // TODO replace to extractStats
-    lexer.input(text)
-    val array = new js.Array[js.Any]
-    if (syntax.getRootNode.isDefined)
-      extractStatements(array, syntax.getRootNode.get);
-    array
-  }
-
-  def extractStatements(array: js.Array[js.Any], node: Node, parent: Option[Int] = None): Unit = {
-    // TODO remove
-    for (
-      result <- node.getBranches.getOrElse("result", List.empty);
-      call <- result.getBranches.getOrElse("call", List.empty);
-      path <- result.getBranches.getOrElse("path", List.empty);
-      segment <- path.getBranches.getOrElse("segment", List.empty);
-      name <- segment.getValues.getOrElse("name", List.empty);
-      if (statements contains name)
-    ) {
-      val id = node.getId
-      val element = js.Dynamic.literal(
-        "id" -> id,
-        "parent" -> parent.map(_.toString).getOrElse[String]("#"),
-        "text" -> name,
-        "type" -> name
-      )
-      array.push(element)
-      for (subExpr <- call.getBranches.getOrElse("expr", List.empty))
-        extractStatements(array, subExpr, Some(id))
-    }
   }
 
   // for demo
