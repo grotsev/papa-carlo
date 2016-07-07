@@ -64,7 +64,7 @@ object DtLangParser {
   @JSExport
   def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
     firstAddedExpr = None
-    val node:Node = if (oldId.isDefined) {
+    val node: Node = if (oldId.isDefined) {
       val oldNode: Node = syntax.getNode(oldId.get).get // WARN should find, otherwise bug is somewhere
       lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
       val n = firstAddedExpr;
@@ -136,6 +136,116 @@ object DtLangParser {
   private def tokenPos(token: TokenReference, after: Boolean = false) = {
     val c = token.collection.cursor(token.index + (if (after) 1 else 0))
     (c._1 - 1, c._2 - 1)
+  }
+
+  @JSExport
+  def register(add: js.Dynamic, remove: js.Dynamic) = {
+    syntax.onNodeCreate.bind {
+      node => {
+
+        node.getKind match {
+          case "call" => {
+            node.onAddBranch.bind { expr => {
+              val parent = node.getParent.get.getParent.get.getId
+              val child = js.Dynamic.literal(
+                "id" -> expr.getId,
+                //"parent" = parent // possible unused
+                "text" -> ("ok" + expr.getId.toString), // TODO
+                "type" -> "type" // TODO
+              )
+              val offset = node.getBranches("expr").indexOf(expr)
+              add(parent, child, offset)
+            }
+            } // TODO
+          }
+          case "expr" => {
+            if (node.getId == 1) {
+              val child = js.Dynamic.literal(
+                "id" -> node.getId,
+                //"parent" = parent // possible unused
+                "text" -> ("ok" + node.getId.toString), // TODO
+                "type" -> "type" // TODO
+              )
+              add("#", child)
+            }
+            node.onRemove.bind { expr => remove(expr.getId) }
+          }
+          case _ =>
+        }
+
+      }
+    }
+  }
+
+  @JSExport
+  def onExprMerge(callback: js.Dynamic) = {
+    // TODO remove
+    syntax.onNodeMerge.bind {
+      node => {
+        var expr = node;
+        while (expr.getKind != "expr")
+          expr = expr.getParent.get;
+        callback(expr.getId)
+      }
+    }
+  }
+
+  @JSExport
+  def getExpr(id: Int): UndefOr[js.Dynamic] = {
+    for (
+      node <- syntax.getNode(id);
+      result <- node.getBranches.getOrElse("result", List.empty);
+      call <- result.getBranches.getOrElse("call", List.empty);
+      path <- result.getBranches.getOrElse("path", List.empty);
+      segment <- path.getBranches.getOrElse("segment", List.empty);
+      name <- segment.getValues.getOrElse("name", List.empty);
+      if (statements contains name)
+    ) {
+      val id = node.getId
+      val e = (i: Int) => call.getBranches("expr")(i).sourceCode
+      val element = js.Dynamic.literal(
+        "id" -> id,
+        "parent" -> (for (call <- node.getParent; result <- call.getParent; expr <- result.getParent) yield expr.getId.toString).getOrElse[String]("#"),
+        "text" -> (name match {
+          case "assign" => {
+            e(0) + " := " + e(1)
+          }
+          case "case" => {
+            e(0)
+          }
+          case "foreach" => {
+            "foreach " + e(0) + " := " + e(1) + " .. " + e(2)
+          }
+          case "break" => {
+            val exprs = call.getBranches.get("expr")
+            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+          }
+          case "continue" => {
+            val exprs = call.getBranches.get("expr")
+            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+          }
+          case "procedure" => {
+            "procedure " + e(0)
+          }
+          case "message" => {
+            "message " + e(0)
+          }
+          case "error" => {
+            "error " + e(0)
+          }
+          case _ => name
+        }),
+        "type" -> name
+      )
+      val children = new js.Array[js.Any]
+      // println(call.getBranches)
+      for (subExpr <- call.getBranches.getOrElse("expr", List.empty); if subExpr.getKind == "expr") {
+        children.push(subExpr.getId)
+      }
+      if (children.length > 0) element.updateDynamic("children")(children)
+      return element
+    }
+    js.undefined
   }
 
   // for demo
