@@ -64,7 +64,7 @@ object DtLangParser {
   @JSExport
   def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
     firstAddedExpr = None
-    val node:Node = if (oldId.isDefined) {
+    val node: Node = if (oldId.isDefined) {
       val oldNode: Node = syntax.getNode(oldId.get).get // WARN should find, otherwise bug is somewhere
       lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
       val n = firstAddedExpr;
@@ -131,6 +131,13 @@ object DtLangParser {
       return Some(element)
     }
     None
+  }
+
+  @JSExport
+  def onChange(callback: js.Dynamic) = {
+    syntax.onNodeMerge.bind { node =>
+      callback(extractStats(syntax.getRootNode.get).get)
+    }
   }
 
   private def tokenPos(token: TokenReference, after: Boolean = false) = {
