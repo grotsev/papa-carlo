@@ -33,7 +33,7 @@ import scala.scalajs.js.UndefOr
   * Created by den on 20.06.16.
   */
 @JSExport("DtLangParser")
-object DtLangParser {
+class DtLangParser {
   private val lexer = DtLang.lexer
   private val syntax = DtLang.syntax(lexer)
   private var lastAddedNode = Option.empty[Int]
@@ -54,11 +54,13 @@ object DtLangParser {
   )
 
   @JSExport
-  def input(text: String): js.Dynamic = {
+  def input(text: String) = {
     lexer.input(text)
-    val result = if (syntax.getErrors.isEmpty) extractStats(syntax.getRootNode.get).get
-    else js.Dynamic.literal("errors" -> getErrors())
-    callback.get(result)
+    if (syntax.getErrors.isEmpty) {
+      val stats: Option[Dynamic] = extractStats(syntax.getRootNode.get)
+      if (!stats.isEmpty) callback.get(stats.get)
+    }
+    else callback.get(js.Dynamic.literal("errors" -> getErrors()))
   }
 
   def extractStats(node: Node, parent: Option[Int] = None): Option[js.Dynamic] = {
