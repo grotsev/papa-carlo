@@ -107,7 +107,7 @@ object DtLangParser {
           }
           case "continue" => {
             val exprs = call.getBranches.get("expr")
-            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+            if (exprs.isEmpty) "continue" else "continue " + exprs.get(0).sourceCode
           }
           case "procedure" => {
             "procedure " + e(0)
