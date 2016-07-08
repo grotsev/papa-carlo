@@ -127,10 +127,10 @@ object DtLangParser {
         val child = extractStats(subExpr, Some(id))
         child.foreach(children.push(_))
       }
-      if (children.length > 0) {
+      if (children.length > 0)
         element.updateDynamic("children")(children)
-        element.updateDynamic("firstChild")(children(0))
-      }
+      if (name == "case")
+        element.updateDynamic("predicate")(call.getBranches("expr")(0).getId)
       return Some(element)
     }
     None
