@@ -129,8 +129,25 @@ object DtLangParser {
       }
       if (children.length > 0)
         element.updateDynamic("children")(children)
-      if (name == "case")
-        element.updateDynamic("predicate")(call.getBranches("expr")(0).getId)
+      name match {
+        case "case" =>
+          element.updateDynamic("predicateId")(call.getBranches("expr")(0).getId)
+          element.updateDynamic("predicate")(e(0))
+        case "assign" =>
+          element.updateDynamic("assignTo")(e(0))
+          element.updateDynamic("expression")(e(1))
+        case "error" =>
+          element.updateDynamic("value")(e(0))
+        case "foreach" =>
+          element.updateDynamic("variable")(e(0))
+          element.updateDynamic("start")(e(1))
+          element.updateDynamic("finish")(e(2))
+        case "message" =>
+          element.updateDynamic("value")(e(0))
+        case "procedure" =>
+          element.updateDynamic("name")(e(0))
+        case _ =>
+      }
       return Some(element)
     }
     None
