@@ -23,6 +23,8 @@ import name.lakhin.eliah.projects.papacarlo.lexis.TokenReference
 import name.lakhin.eliah.projects.papacarlo.syntax.Node
 import kz.greetgo.dtlang.DtLang
 
+import scala.scalajs.js.Dynamic
+
 //import name.lakhin.eliah.projects.papacarlo.examples.Json
 
 import scala.scalajs.js.UndefOr
@@ -36,23 +38,13 @@ object DtLangParser {
   private val syntax = DtLang.syntax(lexer)
   private var lastAddedNode = Option.empty[Int]
   private var lastRemovedNode = Option.empty[Int]
+  private var callback: UndefOr[js.Dynamic] = js.undefined
 
-  private var addedNodes = List.empty[Int]
   // TODO remove
+  private var addedNodes = List.empty[Int]
   private var removedNodes = List.empty[Int]
   syntax.onNodeCreate.bind { node => addedNodes ::= node.getId }
   syntax.onNodeRemove.bind { node => removedNodes ::= node.getId }
-
-
-  private var firstAddedExpr = Option.empty[Int]
-
-  syntax.onNodeCreate.bind { node => // Root is last
-    if (firstAddedExpr.isEmpty && node.getKind == "expr")
-      firstAddedExpr = Some(node.getId)
-  }
-
-  //syntax.onNodeRemove.bind { node => lastRemovedNode = Some(node.getId) }
-  // Is root last or first?
 
   val statements = List(
     "empty", "assign", "group",
@@ -62,19 +54,11 @@ object DtLangParser {
   )
 
   @JSExport
-  def replace(text: String, oldId: UndefOr[Int]): UndefOr[js.Dynamic] = {
-    firstAddedExpr = None
-    val node: Node = if (oldId.isDefined) {
-      val oldNode: Node = syntax.getNode(oldId.get).get // WARN should find, otherwise bug is somewhere
-      lexer.input(text, tokenPos(oldNode.getBegin), tokenPos(oldNode.getEnd, after = true))
-      val n = firstAddedExpr;
-      syntax.getNode(n.get).get // should be Some
-    } else {
-      lexer.input(text)
-      syntax.getRootNode.get // should be Some
-    }
-    firstAddedExpr = None
-    extractStats(node).orUndefined;
+  def input(text: String): js.Dynamic = {
+    lexer.input(text)
+    val result = if (syntax.getErrors.isEmpty) extractStats(syntax.getRootNode.get).get
+    else js.Dynamic.literal("errors" -> getErrors())
+    callback.get(result)
   }
 
   def extractStats(node: Node, parent: Option[Int] = None): Option[js.Dynamic] = {
@@ -155,9 +139,7 @@ object DtLangParser {
 
   @JSExport
   def onChange(callback: js.Dynamic) = {
-    syntax.onNodeMerge.bind { node =>
-      callback(extractStats(syntax.getRootNode.get).get)
-    }
+    this.callback = callback
   }
 
   private def tokenPos(token: TokenReference, after: Boolean = false) = {
@@ -167,12 +149,12 @@ object DtLangParser {
 
   // for demo
 
-  @JSExport
+  //@JSExport
   def inputAll(text: String) {
     lexer.input(text)
   }
 
-  @JSExport
+  //@JSExport
   def input(text: String,
             fromLine: Int,
             fromChar: Int,
@@ -181,7 +163,7 @@ object DtLangParser {
     lexer.input(text, fromLine -> fromChar, toLine -> toChar)
   }
 
-  @JSExport
+  //@JSExport
   def getErrors() = {
     toJsArray(syntax.getErrors.map {
       error =>
