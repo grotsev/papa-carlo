@@ -104,6 +104,10 @@ class DtLangParser {
           case "error" => {
             "error " + e(0)
           }
+          case "group" => {
+            val comment = call.getValues.get("comment");
+            if (comment.isEmpty) "group" else "group " + comment.get(0)
+          }
           case _ => name
         }),
         "type" -> name

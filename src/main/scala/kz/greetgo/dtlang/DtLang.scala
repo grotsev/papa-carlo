@@ -37,6 +37,14 @@ object DtLang {
       )
     )
 
+    tokenCategory("comment",
+      sequence(
+        chunk("{"),
+        zeroOrMore( anyExceptOf("}") ),
+        chunk("}")
+      )
+    )
+
     tokenCategory("number",
       sequence(
         optional(chunk("-")),
@@ -158,6 +166,7 @@ object DtLang {
 
     val call = rule("call").cachable {
       sequence(
+        optional(capture("comment", token("comment"))),
         token("("),
         zeroOrMore(
           branch("expr", expr),
