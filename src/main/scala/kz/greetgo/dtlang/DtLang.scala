@@ -164,9 +164,13 @@ object DtLang {
       )
     }
 
+    val comment = rule("comment").cachable {
+      optional(capture("comment", token("comment")))
+    }
+
     val call = rule("call").cachable {
       sequence(
-        optional(capture("comment", token("comment"))),
+        branch("comment", comment),
         token("("),
         zeroOrMore(
           branch("expr", expr),

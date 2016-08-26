@@ -105,8 +105,8 @@ class DtLangParser {
             "error " + e(0)
           }
           case "group" => {
-            val comment = call.getValues.get("comment");
-            if (comment.isEmpty) "group" else "group " + comment.get(0)
+            val comment = call.getBranches("comment")(0)
+            if (comment.sourceCode.length == 0) "group" else "group " + comment.sourceCode
           }
           case _ => name
         }),
@@ -120,6 +120,8 @@ class DtLangParser {
       if (children.length > 0)
         element.updateDynamic("children")(children)
       name match {
+        case "group" =>
+          element.updateDynamic("commentId")(call.getBranches("comment")(0).getId)
         case "case" =>
           element.updateDynamic("predicateId")(call.getBranches("expr")(0).getId)
           element.updateDynamic("predicate")(e(0))
