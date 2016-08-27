@@ -56,9 +56,11 @@ class DtLangParser {
   @JSExport
   def input(text: String) = {
     lexer.input(text)
-    if (syntax.getErrors.isEmpty) {
+    if (syntax.getErrors.isEmpty) try {
       val stats: Option[Dynamic] = extractStats(syntax.getRootNode.get)
       if (!stats.isEmpty) callback.get(stats.get)
+    } catch {
+      case e: StructureException => callback.get(js.Dynamic.literal("errors" -> e.dynamic))
     }
     else callback.get(js.Dynamic.literal("errors" -> getErrors()))
   }
@@ -71,7 +73,7 @@ class DtLangParser {
       segment <- path.getBranches.getOrElse("segment", List.empty);
       name <- segment.getValues.getOrElse("name", List.empty);
       if (statements contains name)
-    ) {
+    ) try {
       val id = node.getId
       val e = (i: Int) => call.getBranches("expr")(i).sourceCode
       val element = js.Dynamic.literal(
@@ -141,6 +143,16 @@ class DtLangParser {
         case _ =>
       }
       return Some(element)
+    } catch {
+      case e: IndexOutOfBoundsException =>
+        val from = tokenCursor(node.getBegin)
+        val to = tokenCursor(node.getEnd, after = true)
+
+        throw new StructureException(js.Dynamic.literal(
+          "from" -> from,
+          "to" -> to,
+          "description" -> "Invalid structure"
+        ))
     }
     None
   }
@@ -270,3 +282,4 @@ class DtLangParser {
 
 }
 
+case class StructureException(dynamic: Dynamic) extends RuntimeException
