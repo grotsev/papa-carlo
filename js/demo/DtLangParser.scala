@@ -58,7 +58,7 @@ class DtLangParser {
     lexer.input(text)
     if (syntax.getErrors.isEmpty) try {
       val stats: Option[Dynamic] = extractStats(syntax.getRootNode.get)
-      if (!stats.isEmpty) callback.get(stats.get)
+      if (!stats.isEmpty) callback.get(stats.get) else callback.get(js.Dynamic.literal())
     } catch {
       case e: StructureException => callback.get(js.Dynamic.literal("errors" -> e.dynamic))
     }
