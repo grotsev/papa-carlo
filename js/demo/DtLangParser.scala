@@ -217,6 +217,23 @@ class DtLangParser {
   }
 
   @JSExport
+  def getNodeSource(id: Int) = {
+    syntax.nodes.get(id) match {
+      case Some(node) =>
+        js.Dynamic.literal(
+          "exists" -> true,
+          "id" -> id,
+          "source" -> node.sourceCode
+        )
+
+      case None => js.Dynamic.literal(
+        "exists" -> false,
+        "id" -> id
+      )
+    }
+  }
+
+  @JSExport
   def getAST(graph: Boolean = false) = {
     val result = js.Dictionary.empty[js.Any]
 

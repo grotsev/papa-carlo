@@ -141,7 +141,7 @@ object DtLang {
       sequence(
         token("["),
         optional(sequence(
-          branch("field", token("name")), // TODO capture token anywhere
+          capture("field", token("name")),
           token(":")
         )),
         branch("filter", expr),
@@ -183,8 +183,8 @@ object DtLang {
 
     val atom = rule("atom") {
       choice(
-        token("string"),
-        token("number"),
+        capture("num", token("number")),
+        capture("str", token("string")),
         sequence(
           branch("path", path),
           branch("call", optional(call))
