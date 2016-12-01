@@ -136,6 +136,7 @@ class DtLangParser {
           element.updateDynamic("variable")(e(0))
           element.updateDynamic("start")(e(1))
           element.updateDynamic("finish")(e(2))
+          element.updateDynamic("to")(tokenCursor(call.getBranches("expr")(2).getEnd, after = true))
         case "message" =>
           element.updateDynamic("value")(e(0))
         case "procedure" =>
