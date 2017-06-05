@@ -115,10 +115,11 @@ class DtLangParser {
         "type" -> name
       )
       val children = new js.Array[js.Any]
-      for (subExpr <- call.getBranches.getOrElse("expr", List.empty)) {
-        val child = extractStats(subExpr, Some(id))
-        child.foreach(children.push(_))
-      }
+      if (name != "assign")
+        for (subExpr <- call.getBranches.getOrElse("expr", List.empty)) {
+          val child = extractStats(subExpr, Some(id))
+          child.foreach(children.push(_))
+        }
       if (children.length > 0)
         element.updateDynamic("children")(children)
       name match {
