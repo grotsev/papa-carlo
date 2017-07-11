@@ -76,42 +76,43 @@ class DtLangParser {
     ) try {
       val id = node.getId
       val e = (i: Int) => call.getBranches("expr")(i).sourceCode
+      val comment = call.getBranches("comment")(0)
+      val text: String = name match {
+        case "assign" => {
+          e(0) + " := " + e(1)
+        }
+        case "case" => {
+          e(0)
+        }
+        case "foreach" => {
+          "foreach " + e(0) + " := " + e(1) + " .. " + e(2)
+        }
+        case "break" => {
+          val exprs = call.getBranches.get("expr")
+          if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
+        }
+        case "continue" => {
+          val exprs = call.getBranches.get("expr")
+          if (exprs.isEmpty) "continue" else "continue " + exprs.get(0).sourceCode
+        }
+        case "procedure" => {
+          "procedure " + e(0)
+        }
+        case "message" => {
+          "message " + e(0)
+        }
+        case "error" => {
+          "error " + e(0)
+        }
+        case "group" => {
+          "group"
+        }
+        case _ => name
+      }
       val element = js.Dynamic.literal(
         "id" -> id,
         "parent" -> parent.map(_.toString).getOrElse[String]("#"),
-        "text" -> (name match {
-          case "assign" => {
-            e(0) + " := " + e(1)
-          }
-          case "case" => {
-            e(0)
-          }
-          case "foreach" => {
-            "foreach " + e(0) + " := " + e(1) + " .. " + e(2)
-          }
-          case "break" => {
-            val exprs = call.getBranches.get("expr")
-            if (exprs.isEmpty) "break" else "break " + exprs.get(0).sourceCode
-          }
-          case "continue" => {
-            val exprs = call.getBranches.get("expr")
-            if (exprs.isEmpty) "continue" else "continue " + exprs.get(0).sourceCode
-          }
-          case "procedure" => {
-            "procedure " + e(0)
-          }
-          case "message" => {
-            "message " + e(0)
-          }
-          case "error" => {
-            "error " + e(0)
-          }
-          case "group" => {
-            val comment = call.getBranches("comment")(0)
-            if (comment.sourceCode.length == 0) "group" else "group " + comment.sourceCode
-          }
-          case _ => name
-        }),
+        "text" -> (if (comment.sourceCode.length == 0) text else text + " " + comment.sourceCode),
         "type" -> name
       )
       val children = new js.Array[js.Any]
@@ -122,9 +123,8 @@ class DtLangParser {
         }
       if (children.length > 0)
         element.updateDynamic("children")(children)
+      element.updateDynamic("commentId")(call.getBranches("comment")(0).getId)
       name match {
-        case "group" =>
-          element.updateDynamic("commentId")(call.getBranches("comment")(0).getId)
         case "case" =>
           element.updateDynamic("predicateId")(call.getBranches("expr")(0).getId)
           element.updateDynamic("predicate")(e(0))
